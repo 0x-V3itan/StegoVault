@@ -1,0 +1,871 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Secure Communication Tool</title>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&family=Exo+2:wght@300;400;600;700&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --bg-deep:       #040d18;
+  --bg-panel:      #071525;
+  --bg-card:       #0a1e35;
+  --bg-input:      #061220;
+  --border:        #0e2d4a;
+  --border-glow:   #0d7fbf;
+  --accent:        #00b4d8;
+  --accent-bright: #48cae4;
+  --accent-dim:    #0077a8;
+  --teal:          #00cfb4;
+  --text-primary:  #d0eaf8;
+  --text-secondary:#6fa3c0;
+  --text-muted:    #3a6880;
+  --danger:        #e05c6a;
+  --grid-color:    rgba(13,127,191,0.06);
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+
+body {
+  font-family:'Exo 2',sans-serif;
+  background:var(--bg-deep);
+  color:var(--text-primary);
+  min-height:100vh;
+  display:flex; align-items:center; justify-content:center;
+  overflow:hidden; position:relative;
+}
+body::before {
+  content:''; position:fixed; inset:0;
+  background-image:
+    linear-gradient(var(--grid-color) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-color) 1px, transparent 1px);
+  background-size:48px 48px;
+  pointer-events:none; z-index:0;
+}
+body::after {
+  content:''; position:fixed; inset:0;
+  background:
+    radial-gradient(ellipse 600px 400px at 20% 30%, rgba(0,100,160,0.12) 0%, transparent 70%),
+    radial-gradient(ellipse 500px 350px at 80% 70%, rgba(0,180,216,0.08) 0%, transparent 70%);
+  pointer-events:none; z-index:0;
+}
+
+/* Window */
+.window {
+  position:relative; z-index:1;
+  width:460px;
+  background:var(--bg-panel);
+  border:1px solid var(--border);
+  border-radius:12px;
+  box-shadow:0 0 0 1px rgba(0,180,216,0.06), 0 30px 80px rgba(0,0,0,0.7), 0 0 60px rgba(0,100,180,0.1);
+  overflow:hidden;
+  animation:windowIn .45s cubic-bezier(.22,1,.36,1) both;
+}
+@keyframes windowIn { from{opacity:0;transform:translateY(22px) scale(.97)} to{opacity:1;transform:none} }
+
+.titlebar {
+  display:flex; align-items:center; gap:8px;
+  padding:13px 18px;
+  background:rgba(4,13,24,.9);
+  border-bottom:1px solid var(--border);
+}
+.dot { width:13px; height:13px; border-radius:50%; }
+.dot-red    { background:#ff5f57; }
+.dot-yellow { background:#febc2e; }
+.dot-green  { background:#28c840; }
+.titlebar-text {
+  flex:1; text-align:center;
+  font-family:'Rajdhani',sans-serif; font-size:14px; font-weight:500;
+  color:var(--text-secondary); letter-spacing:.06em;
+}
+
+/* Screens */
+.screen { display:none; padding:36px 42px 42px; max-height:90vh; overflow-y:auto; }
+.screen.active { display:block; animation:fadeIn .3s ease both; }
+@keyframes fadeIn { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:none} }
+
+/* Scrollbar */
+.screen::-webkit-scrollbar { width:4px; }
+.screen::-webkit-scrollbar-track { background:transparent; }
+.screen::-webkit-scrollbar-thumb { background:var(--border); border-radius:4px; }
+
+/* Shield */
+.shield-wrap { display:flex; justify-content:center; margin-bottom:20px; }
+.shield {
+  width:68px; height:68px; border-radius:50%;
+  background:rgba(0,180,216,0.08);
+  border:1.5px solid rgba(0,180,216,0.25);
+  display:flex; align-items:center; justify-content:center;
+  box-shadow:0 0 24px rgba(0,180,216,0.15);
+}
+.shield svg { width:32px; height:32px; }
+
+/* Headings */
+.screen-title {
+  font-family:'Rajdhani',sans-serif; font-size:28px; font-weight:700;
+  text-align:center; letter-spacing:.02em; margin-bottom:4px;
+}
+.screen-sub { text-align:center; color:var(--text-secondary); font-size:13.5px; margin-bottom:28px; }
+
+/* Form */
+.field { margin-bottom:16px; }
+.field label {
+  display:block; margin-bottom:7px;
+  font-family:'Rajdhani',sans-serif; font-size:12px; font-weight:600;
+  letter-spacing:.14em; color:var(--accent);
+}
+.input-wrap { position:relative; display:flex; align-items:center; }
+.input-wrap svg.icon-left {
+  position:absolute; left:13px; width:16px; height:16px;
+  color:var(--text-muted); pointer-events:none; z-index:1;
+}
+.input-wrap input, .input-wrap textarea {
+  width:100%;
+  background:var(--bg-input);
+  border:1px solid var(--border);
+  border-radius:8px;
+  color:var(--text-primary);
+  font-family:'Exo 2',sans-serif; font-size:14px;
+  padding:12px 42px;
+  outline:none;
+  transition:border-color .2s, box-shadow .2s;
+}
+.input-wrap textarea {
+  resize:vertical; min-height:90px;
+  padding:12px 14px 12px 42px; line-height:1.5;
+}
+.input-wrap input::placeholder, .input-wrap textarea::placeholder { color:var(--text-muted); }
+.input-wrap input:focus, .input-wrap textarea:focus {
+  border-color:var(--border-glow);
+  box-shadow:0 0 0 3px rgba(0,180,216,0.1);
+}
+.toggle-pw {
+  position:absolute; right:13px;
+  background:none; border:none; cursor:pointer;
+  color:var(--text-muted); padding:0;
+  display:flex; align-items:center; transition:color .2s;
+}
+.toggle-pw:hover { color:var(--accent); }
+.toggle-pw svg { width:17px; height:17px; }
+
+/* Buttons */
+.btn {
+  width:100%; padding:14px; border:none; border-radius:8px;
+  font-family:'Rajdhani',sans-serif; font-size:15px; font-weight:700;
+  letter-spacing:.12em; cursor:pointer; transition:all .2s;
+}
+.btn-primary {
+  background:linear-gradient(90deg, var(--accent-dim), var(--accent), var(--accent-bright));
+  color:#fff; box-shadow:0 4px 20px rgba(0,180,216,0.3);
+}
+.btn-primary:hover { transform:translateY(-1px); box-shadow:0 8px 28px rgba(0,180,216,0.45); }
+.btn-primary:active { transform:translateY(0); }
+.btn-primary:disabled { opacity:.6; cursor:not-allowed; transform:none; }
+
+.btn-outline {
+  background:transparent; border:1px solid var(--border);
+  color:var(--text-secondary); margin-top:10px;
+}
+.btn-outline:hover { border-color:var(--accent); color:var(--accent); background:rgba(0,180,216,0.06); }
+
+.btn-danger {
+  background:rgba(224,92,106,0.08); border:1px solid rgba(224,92,106,0.25);
+  color:var(--danger); font-size:13px; padding:10px;
+}
+.btn-danger:hover { background:rgba(224,92,106,0.15); }
+
+/* Link */
+.link-row { text-align:center; margin-top:18px; font-size:13px; color:var(--text-secondary); }
+.link-row a { color:var(--accent-bright); font-weight:600; cursor:pointer; text-decoration:none; border-bottom:1px solid transparent; transition:border-color .2s; }
+.link-row a:hover { border-color:var(--accent-bright); }
+
+/* Dashboard */
+.logo-badge {
+  display:inline-flex; align-items:center; gap:10px;
+  background:rgba(0,180,216,0.07); border:1px solid rgba(0,180,216,0.18);
+  border-radius:50px; padding:8px 20px; margin-bottom:14px;
+}
+.logo-badge svg { width:18px; height:18px; color:var(--accent); }
+.logo-badge span { font-family:'Rajdhani',sans-serif; font-size:13px; font-weight:600; letter-spacing:.1em; color:var(--accent); }
+.dashboard-logo { text-align:center; margin-bottom:28px; }
+.dashboard-title { font-family:'Rajdhani',sans-serif; font-size:22px; font-weight:700; letter-spacing:.05em; }
+.dashboard-sub { font-size:13px; color:var(--text-secondary); margin-top:4px; }
+
+.dash-cards { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:20px; }
+.dash-card {
+  background:var(--bg-card); border:1px solid var(--border);
+  border-radius:10px; padding:22px 16px; text-align:center; cursor:pointer;
+  transition:all .25s; position:relative; overflow:hidden;
+}
+.dash-card::before {
+  content:''; position:absolute; inset:0;
+  background:linear-gradient(135deg, rgba(0,180,216,0.06), transparent);
+  opacity:0; transition:opacity .25s;
+}
+.dash-card:hover { border-color:var(--accent); transform:translateY(-2px); box-shadow:0 8px 24px rgba(0,0,0,0.4); }
+.dash-card:hover::before { opacity:1; }
+.dash-card svg { width:30px; height:30px; color:var(--accent); margin-bottom:10px; }
+.dash-card-title { font-family:'Rajdhani',sans-serif; font-size:15px; font-weight:700; letter-spacing:.04em; margin-bottom:4px; }
+.dash-card-sub { font-size:11.5px; color:var(--text-muted); line-height:1.4; }
+
+/* File zone */
+.file-zone {
+  border:1.5px dashed var(--border); border-radius:8px; padding:18px;
+  text-align:center; cursor:pointer; transition:all .2s; margin-bottom:16px;
+  background:var(--bg-input);
+}
+.file-zone:hover { border-color:var(--accent); background:rgba(0,180,216,0.04); }
+.file-zone svg { width:26px; height:26px; color:var(--text-muted); margin-bottom:8px; display:block; margin-left:auto; margin-right:auto; }
+.file-zone-title { font-size:13.5px; color:var(--text-secondary); font-weight:600; }
+.file-zone-sub { font-size:11.5px; color:var(--text-muted); margin-top:2px; }
+.file-zone.has-file { border-color:var(--teal); background:rgba(0,207,180,0.04); }
+.file-zone.has-file svg { color:var(--teal); }
+.file-zone.has-file .file-zone-title { color:var(--teal); }
+
+/* Status */
+.status {
+  border-radius:7px; padding:11px 14px; font-size:13px; margin-top:12px;
+  display:none; align-items:center; gap:9px; line-height:1.4;
+}
+.status.show { display:flex; }
+.status.success  { background:rgba(0,207,180,0.1);  border:1px solid rgba(0,207,180,0.25);  color:var(--teal); }
+.status.error    { background:rgba(224,92,106,0.1); border:1px solid rgba(224,92,106,0.25); color:var(--danger); }
+.status.warning  { background:rgba(255,180,0,0.1);  border:1px solid rgba(255,180,0,0.35);  color:#c98a00; }
+.status svg { width:16px; height:16px; flex-shrink:0; }
+
+/* Output */
+.output-box {
+  background:var(--bg-input); border:1px solid var(--border);
+  border-radius:8px; padding:14px;
+  font-family:'Share Tech Mono',monospace; font-size:13px; color:var(--teal);
+  min-height:80px; word-break:break-all; line-height:1.6;
+  margin-top:14px; display:none; white-space:pre-wrap;
+}
+.output-box.show { display:block; }
+
+/* Download button */
+.btn-download {
+  width:100%; padding:11px; border:1px solid rgba(0,207,180,0.3);
+  border-radius:8px; background:rgba(0,207,180,0.08); color:var(--teal);
+  font-family:'Rajdhani',sans-serif; font-size:14px; font-weight:700;
+  letter-spacing:.1em; cursor:pointer; transition:all .2s; margin-top:10px;
+  display:none;
+}
+.btn-download.show { display:block; }
+.btn-download:hover { background:rgba(0,207,180,0.15); border-color:var(--teal); }
+
+/* Char counter */
+.char-counter { text-align:right; font-size:11px; color:var(--text-muted); margin-top:4px; font-family:'Share Tech Mono',monospace; }
+
+/* Divider */
+.divider { border:none; border-top:1px solid var(--border); margin:18px 0; }
+
+/* Spinner */
+.spinner {
+  display:inline-block; width:15px; height:15px;
+  border:2px solid rgba(255,255,255,0.25); border-top-color:#fff;
+  border-radius:50%; animation:spin .7s linear infinite;
+  vertical-align:middle; margin-right:8px;
+}
+@keyframes spin { to{transform:rotate(360deg)} }
+</style>
+</head>
+<body>
+<div class="window">
+
+  <!-- Title bar -->
+  <div class="titlebar">
+    <span class="dot dot-red"></span>
+    <span class="dot dot-yellow"></span>
+    <span class="dot dot-green"></span>
+    <span class="titlebar-text">Secure Communication Tool</span>
+  </div>
+
+  <!-- ═══ LOGIN ═══ -->
+  <div class="screen active" id="screen-login">
+    <div class="shield-wrap">
+      <div class="shield">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#00b4d8" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+          <polyline points="9 12 11 14 15 10"/>
+        </svg>
+      </div>
+    </div>
+    <div class="screen-title">Welcome Back</div>
+    <div class="screen-sub">Sign in to your secure account</div>
+
+    <div class="field">
+      <label>USERNAME</label>
+      <div class="input-wrap">
+        <svg class="icon-left" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+        <input type="text" id="login-user" placeholder="Enter username" autocomplete="off" onkeydown="if(event.key==='Enter')doLogin()"/>
+      </div>
+    </div>
+    <div class="field">
+      <label>PASSWORD</label>
+      <div class="input-wrap">
+        <svg class="icon-left" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        <input type="password" id="login-pass" placeholder="Enter password" onkeydown="if(event.key==='Enter')doLogin()"/>
+        <button class="toggle-pw" onclick="togglePw('login-pass')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <div id="login-status" class="status"></div>
+    <button class="btn btn-primary" style="margin-top:10px" id="login-btn" onclick="doLogin()">LOGIN</button>
+    <div class="link-row">Don't have an account? <a onclick="go('screen-register')">Register</a></div>
+  </div>
+
+  <!-- ═══ REGISTER ═══ -->
+  <div class="screen" id="screen-register">
+    <div class="shield-wrap">
+      <div class="shield">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#00b4d8" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+          <line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/>
+        </svg>
+      </div>
+    </div>
+    <div class="screen-title">Create Account</div>
+    <div class="screen-sub">Register to get started</div>
+
+    <div class="field">
+      <label>USERNAME</label>
+      <div class="input-wrap">
+        <svg class="icon-left" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+        <input type="text" id="reg-user" placeholder="Choose a username" autocomplete="off"/>
+      </div>
+    </div>
+    <div class="field">
+      <label>PASSWORD</label>
+      <div class="input-wrap">
+        <svg class="icon-left" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        <input type="password" id="reg-pass" placeholder="Choose a password"/>
+        <button class="toggle-pw" onclick="togglePw('reg-pass')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+        </button>
+      </div>
+    </div>
+    <div class="field">
+      <label>CONFIRM PASSWORD</label>
+      <div class="input-wrap">
+        <svg class="icon-left" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        <input type="password" id="reg-confirm" placeholder="Repeat your password"/>
+        <button class="toggle-pw" onclick="togglePw('reg-confirm')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <div id="reg-status" class="status"></div>
+    <button class="btn btn-primary" style="margin-top:10px" id="reg-btn" onclick="doRegister()">CREATE ACCOUNT</button>
+    <div class="link-row">Already have an account? <a onclick="go('screen-login')">Sign In</a></div>
+  </div>
+
+  <!-- ═══ DASHBOARD ═══ -->
+  <div class="screen" id="screen-dashboard">
+  <div class="dashboard-logo">
+    <div class="logo-badge">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+      </svg>
+      <span>SECURE COMM</span>
+    </div>
+    <div class="dashboard-title">Secure Communication Tool</div>
+    <div class="dashboard-sub">AES Encryption · LSB Steganography</div>
+  </div>
+
+  <div class="dash-cards">
+
+    <div class="dash-card" onclick="go('screen-hide')">
+      <div class="dash-card-title">Hide Message</div>
+      <div class="dash-card-sub">Embed secret text inside an image</div>
+    </div>
+
+    <div class="dash-card" onclick="go('screen-extract')">
+      <div class="dash-card-title">Extract Message</div>
+      <div class="dash-card-sub">Reveal hidden text from image</div>
+    </div>
+
+    <div class="dash-card" onclick="go('screen-analyze')">
+      <div class="dash-card-title">Analyze Image</div>
+      <div class="dash-card-sub">Detect hidden data</div>
+    </div>
+
+    <div class="dash-card" onclick="go('screen-hide-image')">
+      <div class="dash-card-title">Hide Image</div>
+      <div class="dash-card-sub">Embed image inside image</div>
+    </div>
+
+  </div>
+
+  <hr class="divider"/>
+
+  <button class="btn btn-danger" onclick="doLogout()">
+    LOGOUT
+  </button>
+</div>
+
+  <!-- ═══ HIDE MESSAGE ═══ -->
+  <div class="screen" id="screen-hide">
+    <div class="screen-title" style="font-size:22px;margin-bottom:4px">Hide Message</div>
+    <div class="screen-sub" style="margin-bottom:20px">Encrypt &amp; embed a secret inside an image</div>
+
+    <div class="file-zone" id="hide-zone" onclick="document.getElementById('hide-file').click()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+      <div class="file-zone-title" id="hide-file-label">Select Cover Image</div>
+      <div class="file-zone-sub">PNG / JPG / JPEG</div>
+      <input type="file" id="hide-file" accept=".png,.jpg,.jpeg" style="display:none" onchange="fileChosen('hide-file','hide-zone','hide-file-label')"/>
+    </div>
+
+    <div class="field">
+      <label>SECRET MESSAGE</label>
+      <div class="input-wrap">
+        <svg class="icon-left" style="top:13px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        <textarea id="hide-msg" placeholder="Type your secret message here..." oninput="updateChar()"></textarea>
+      </div>
+      <div class="char-counter" id="char-count">0 characters</div>
+    </div>
+
+    <div class="field">
+      <label>ENCRYPTION PASSWORD</label>
+      <div class="input-wrap">
+        <svg class="icon-left" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        <input type="password" id="hide-pass" placeholder="Enter encryption password"/>
+        <button class="toggle-pw" onclick="togglePw('hide-pass')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <div id="hide-status" class="status"></div>
+
+    <!-- Download button (shown after success) -->
+    <button class="btn-download" id="hide-download" onclick="downloadStego()">
+      ↓ DOWNLOAD STEGO IMAGE
+    </button>
+
+    <button class="btn btn-primary" style="margin-top:12px" id="hide-btn" onclick="doHide()">
+      <svg style="width:15px;height:15px;vertical-align:middle;margin-right:7px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+      ENCRYPT &amp; HIDE
+    </button>
+    <button class="btn btn-outline" onclick="go('screen-dashboard')">← Back to Dashboard</button>
+  </div>
+
+  <!-- ═══ EXTRACT MESSAGE ═══ -->
+   <div class="screen" id="screen-analyze">
+
+  <div class="screen-title">Steganalysis</div>
+  <div class="screen-sub">Detect hidden data in images</div>
+
+  <div class="file-zone" id="analyze-zone" onclick="document.getElementById('analyze-file').click()">
+    <div class="file-zone-title" id="analyze-label">Upload Image</div>
+    <input type="file" id="analyze-file" accept=".png,.jpg,.jpeg" style="display:none"
+           onchange="fileChosen('analyze-file','analyze-zone','analyze-label')"/>
+  </div>
+
+  <div id="analyze-status" class="status"></div>
+
+  <button class="btn btn-primary" onclick="doAnalyze()">ANALYZE</button>
+  <button class="btn btn-outline" onclick="go('screen-dashboard')">Back</button>
+
+</div>
+  <div class="screen" id="screen-extract">
+    <div class="screen-title" style="font-size:22px;margin-bottom:4px">Extract Message</div>
+    <div class="screen-sub" style="margin-bottom:20px">Reveal the hidden secret from a stego-image</div>
+
+    <div class="file-zone" id="extract-zone" onclick="document.getElementById('extract-file').click()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      <div class="file-zone-title" id="extract-file-label">Upload Stego Image</div>
+      <div class="file-zone-sub">PNG / JPG / JPEG</div>
+      <input type="file" id="extract-file" accept=".png,.jpg,.jpeg" style="display:none" onchange="fileChosen('extract-file','extract-zone','extract-file-label')"/>
+    </div>
+
+    <div class="field">
+      <label>DECRYPTION PASSWORD</label>
+      <div class="input-wrap">
+        <svg class="icon-left" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        <input type="password" id="extract-pass" placeholder="Enter decryption password" onkeydown="if(event.key==='Enter')doExtract()"/>
+        <button class="toggle-pw" onclick="togglePw('extract-pass')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <div id="extract-status" class="status"></div>
+    <div class="output-box" id="extract-output"></div>
+
+    <button class="btn btn-primary" style="margin-top:12px" id="extract-btn" onclick="doExtract()">
+      <svg style="width:15px;height:15px;vertical-align:middle;margin-right:7px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      EXTRACT MESSAGE
+    </button>
+    <button class="btn btn-outline" onclick="go('screen-extract-reset')">← Back to Dashboard</button>
+  </div>
+
+  <div class="screen" id="screen-hide-image">
+
+  <div class="screen-title">Hide Image</div>
+
+  <div class="file-zone" id="cover-zone" onclick="document.getElementById('cover-img').click()">
+  <div id="cover-label">Select Cover Image</div>
+  <input type="file" id="cover-img" accept=".png,.jpg,.jpeg"
+         onchange="fileChosen('cover-img','cover-zone','cover-label')" hidden>
+</div>
+
+<div class="file-zone" id="secret-zone" onclick="document.getElementById('secret-img').click()">
+  <div id="secret-label">Select Secret Image</div>
+  <input type="file" id="secret-img" accept=".png,.jpg,.jpeg"
+         onchange="fileChosen('secret-img','secret-zone','secret-label')" hidden>
+</div>
+
+  <div id="hi-status" class="status"></div>
+
+  <button class="btn btn-primary" onclick="doHideImage()">HIDE IMAGE</button>
+  <button class="btn-download" id="img-download" onclick="downloadHiddenImage()">
+  ↓ DOWNLOAD IMAGE
+  </button>
+<hr>
+
+<div class="screen-title">Extract Hidden Image</div>
+
+<div class="file-zone" onclick="document.getElementById('extract-img').click()" id="extract-img-zone">
+  <div id="extract-img-label">Upload Stego Image</div>
+  <input type="file" id="extract-img"
+onchange="fileChosen('extract-img','extract-img-zone','extract-img-label')" hidden>
+</div>
+
+<div id="extract-status" class="status"></div>
+
+<img id="preview" style="width:100%;display:none;margin-top:10px;"/>
+
+<button class="btn btn-primary" onclick="doExtractImage()">EXTRACT IMAGE</button>
+
+<button class="btn btn-outline" onclick="go('screen-dashboard')">Back</button>
+
+</div>
+</div><!-- /window -->
+
+<script>
+// ── Routing ────────────────────────────────────────────────────────────────────
+function go(id) {
+  if (id === 'screen-extract-reset') {
+    resetExtract();
+    id = 'screen-dashboard';
+  }
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+// ── Helpers ────────────────────────────────────────────────────────────────────
+function togglePw(id) {
+  const inp = document.getElementById(id);
+  inp.type = inp.type === 'password' ? 'text' : 'password';
+}
+
+function fileChosen(inputId, zoneId, labelId) {
+  const f = document.getElementById(inputId).files[0];
+  if (!f) return;
+  document.getElementById(labelId).textContent = f.name;
+  document.getElementById(zoneId).classList.add('has-file');
+}
+
+function updateChar() {
+  const t = document.getElementById('hide-msg').value;
+  document.getElementById('char-count').textContent = t.length + ' characters';
+}
+
+function setStatus(id, type, msg) {
+  const el = document.getElementById(id);
+  el.className = 'status show ' + type;
+  const icon = type === 'success'
+    ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>'
+    : type === 'warning'
+    ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>'
+    : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>';
+  el.innerHTML = icon + msg;
+}
+function clearStatus(id) { document.getElementById(id).className = 'status'; }
+
+function readFileAsBase64(file) {
+  return new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onload  = () => res(r.result.split(',')[1]);
+    r.onerror = () => rej(new Error('Could not read file'));
+    r.readAsDataURL(file);
+  });
+}
+
+// ── API caller — always talks to Flask on the same origin ──────────────────────
+async function api(endpoint, body) {
+  const resp = await fetch(endpoint, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  return resp.json();
+}
+
+// ── Stego image download (blob returned from /api/hide) ────────────────────────
+let _stegoB64 = null;
+let _stegoName = 'stego.png';
+
+function downloadStego() {
+  if (!_stegoB64) return;
+  const bytes = Uint8Array.from(atob(_stegoB64), c => c.charCodeAt(0));
+  const blob  = new Blob([bytes], { type: 'image/png' });
+  const url   = URL.createObjectURL(blob);
+  const a     = document.createElement('a');
+  a.href = url; a.download = _stegoName;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ── LOGIN ──────────────────────────────────────────────────────────────────────
+async function doLogin() {
+  clearStatus('login-status');
+  const u = document.getElementById('login-user').value.trim();
+  const p = document.getElementById('login-pass').value;
+  if (!u || !p) { setStatus('login-status','error','Please fill in all fields.'); return; }
+
+  const btn = document.getElementById('login-btn');
+  btn.innerHTML = '<span class="spinner"></span>SIGNING IN...'; btn.disabled = true;
+
+  try {
+    const res = await api('/api/login', { username: u, password: p });
+    if (res.ok) {
+      go('screen-dashboard');
+    } else {
+      setStatus('login-status','error', res.msg);
+    }
+  } catch {
+    setStatus('login-status','error','Cannot reach server. Is server.py running?');
+  } finally {
+    btn.innerHTML = 'LOGIN'; btn.disabled = false;
+  }
+}
+
+// ── REGISTER ───────────────────────────────────────────────────────────────────
+async function doRegister() {
+  clearStatus('reg-status');
+  const u  = document.getElementById('reg-user').value.trim();
+  const p  = document.getElementById('reg-pass').value;
+  const p2 = document.getElementById('reg-confirm').value;
+  if (!u || !p || !p2) { setStatus('reg-status','error','Please fill in all fields.'); return; }
+  if (p !== p2)         { setStatus('reg-status','error','Passwords do not match.'); return; }
+  if (p.length < 4)     { setStatus('reg-status','error','Password must be at least 4 characters.'); return; }
+
+  const btn = document.getElementById('reg-btn');
+  btn.innerHTML = '<span class="spinner"></span>CREATING...'; btn.disabled = true;
+
+  try {
+    const res = await api('/api/register', { username: u, password: p });
+    if (res.ok) {
+      setStatus('reg-status','success','Account created! Redirecting...');
+      setTimeout(() => {
+        go('screen-login');
+        document.getElementById('login-user').value = u;
+      }, 1200);
+    } else {
+      setStatus('reg-status','error', res.msg);
+    }
+  } catch {
+    setStatus('reg-status','error','Cannot reach server. Is server.py running?');
+  } finally {
+    btn.innerHTML = 'CREATE ACCOUNT'; btn.disabled = false;
+  }
+}
+
+// ── HIDE ───────────────────────────────────────────────────────────────────────
+async function doHide() {
+  clearStatus('hide-status');
+  document.getElementById('hide-download').classList.remove('show');
+  _stegoB64 = null;
+
+  const file = document.getElementById('hide-file').files[0];
+  const msg  = document.getElementById('hide-msg').value.trim();
+  const pass = document.getElementById('hide-pass').value;
+
+  if (!file) { setStatus('hide-status','error','Please select a cover image.'); return; }
+  if (!msg)  { setStatus('hide-status','error','Please enter a secret message.'); return; }
+  if (!pass) { setStatus('hide-status','error','Please enter an encryption password.'); return; }
+
+  const btn = document.getElementById('hide-btn');
+  btn.innerHTML = '<span class="spinner"></span>PROCESSING...'; btn.disabled = true;
+
+  try {
+    const b64 = await readFileAsBase64(file);
+    const res = await api('/api/hide', { image_b64: b64, message: msg, password: pass });
+
+    if (res.ok) {
+      setStatus('hide-status','success', res.msg);
+      _stegoB64  = res.stego_b64;
+      _stegoName = file.name.replace(/\.[^.]+$/, '') + '_stego.png';
+      document.getElementById('hide-download').classList.add('show');
+    } else {
+      setStatus('hide-status','error', res.msg);
+    }
+  } catch {
+    setStatus('hide-status','error','Cannot reach server. Is server.py running?');
+  } finally {
+    btn.innerHTML = '<svg style="width:15px;height:15px;vertical-align:middle;margin-right:7px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>ENCRYPT &amp; HIDE';
+    btn.disabled = false;
+  }
+}
+
+// ── EXTRACT ────────────────────────────────────────────────────────────────────
+async function doExtract() {
+  clearStatus('extract-status');
+  document.getElementById('extract-output').classList.remove('show');
+
+  const file = document.getElementById('extract-file').files[0];
+  const pass = document.getElementById('extract-pass').value;
+
+  if (!file) { setStatus('extract-status','error','Please upload a stego image.'); return; }
+  if (!pass) { setStatus('extract-status','error','Please enter the decryption password.'); return; }
+
+  const btn = document.getElementById('extract-btn');
+  btn.innerHTML = '<span class="spinner"></span>DECRYPTING...'; btn.disabled = true;
+
+  try {
+    const b64 = await readFileAsBase64(file);
+    const res = await api('/api/extract', { image_b64: b64, password: pass });
+
+    if (res.ok) {
+      setStatus('extract-status','success','Message extracted successfully!');
+      const out = document.getElementById('extract-output');
+      out.textContent = res.msg;
+      out.classList.add('show');
+    } else {
+      setStatus('extract-status','error', res.msg);
+    }
+  } catch {
+    setStatus('extract-status','error','Cannot reach server. Is server.py running?');
+  } finally {
+    btn.innerHTML = '<svg style="width:15px;height:15px;vertical-align:middle;margin-right:7px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>EXTRACT MESSAGE';
+    btn.disabled = false;
+  }
+}
+async function doAnalyze() {
+  clearStatus('analyze-status');
+
+  const file = document.getElementById('analyze-file').files[0];
+  if (!file) {
+    setStatus('analyze-status','error','Select image first');
+    return;
+  }
+
+  try {
+    const b64 = await readFileAsBase64(file);
+    const res = await api('/api/analyze', { image_b64: b64 });
+
+    if (res.ok) {
+      // server sends res.suspicious = true/false
+      const type = res.suspicious ? 'warning' : 'success';
+      setStatus('analyze-status', type, res.msg);
+    } else {
+      setStatus('analyze-status','error', res.msg);
+    }
+  } catch {
+    setStatus('analyze-status','error','Server error');
+  }
+}
+
+// ── LOGOUT ─────────────────────────────────────────────────────────────────────
+function doLogout() {
+  document.getElementById('login-user').value = '';
+  document.getElementById('login-pass').value = '';
+  clearStatus('login-status');
+  go('screen-login');
+}
+
+function resetExtract() {
+  clearStatus('extract-status');
+  document.getElementById('extract-output').classList.remove('show');
+  document.getElementById('extract-file').value = '';
+  document.getElementById('extract-pass').value = '';
+  document.getElementById('extract-zone').classList.remove('has-file');
+  document.getElementById('extract-file-label').textContent = 'Upload Stego Image';
+}
+let _hiddenImage = null;
+
+async function doHideImage() {
+  const cover = document.getElementById('cover-img').files[0];
+  const secret = document.getElementById('secret-img').files[0];
+
+  if (!cover || !secret) {
+    setStatus('hi-status','error','Select both images');
+    return;
+  }
+
+  try {
+    const coverB64 = await readFileAsBase64(cover);
+    const secretB64 = await readFileAsBase64(secret);
+
+    const res = await api('/api/hide-image', {
+      cover_b64: coverB64,
+      secret_b64: secretB64
+    });
+
+    if (res.ok) {
+      setStatus('hi-status','success','Image hidden successfully');
+
+      _hiddenImage = res.stego_b64;
+      document.getElementById('img-download').classList.add('show');
+
+    } else {
+      setStatus('hi-status','error',res.msg);
+    }
+
+  } catch {
+    setStatus('hi-status','error','Server error');
+  }
+}
+
+function downloadHiddenImage() {
+  if (!_hiddenImage) return;
+
+  const bytes = Uint8Array.from(atob(_hiddenImage), c => c.charCodeAt(0));
+  const blob = new Blob([bytes], { type: 'image/png' });
+  const url = URL.createObjectURL(blob);
+
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'hidden_image.png';
+  a.click();
+
+  URL.revokeObjectURL(url);
+}
+
+async function doExtractImage() {
+  const file = document.getElementById('extract-img').files[0];
+
+  if (!file) {
+    setStatus('extract-status','error','Select image first');
+    return;
+  }
+
+  try {
+    const b64 = await readFileAsBase64(file);
+
+    const res = await api('/api/extract-image', {
+      image_b64: b64
+    });
+
+    if (res.ok) {
+      const img = document.getElementById('preview');
+      img.src = "data:image/png;base64," + res.image_b64;
+      img.style.display = "block";
+
+      setStatus('extract-status','success','Image extracted successfully');
+    } else {
+      setStatus('extract-status','error',res.msg);
+    }
+
+  } catch {
+    setStatus('extract-status','error','Server error');
+  }
+}
+</script>
+</body>
+</html>
